@@ -66,14 +66,13 @@ def process_images(image_dir, image_files, output_folder):
             print(f"⚠️ Zernike momenti nulli per {image_file}, verifica l'immagine!")
             cv2.imwrite(f"error_{image_file}", gray)
         
-        P = 8 # Numero di pixel nel vicinato
-        R = 1  # Raggio
+        P = 16 # Numero di pixel nel vicinato
+        R = 2  # Raggio
         lbp = local_binary_pattern(gray, P=P, R=R, method="uniform")
-
         # Istogramma dei valori LBP
-        hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, P + 47), density=True)
+        hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), density=True)
         #print(len(hist))  # Output: 54
-
+        print(len(hist))
         features["lbp"] = hist
 
         # Salva l'immagine con contorni nella cartella Images
