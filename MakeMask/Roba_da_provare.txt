@@ -1,0 +1,8 @@
+Provare ad automatizzare la seguente serie di passaggi:
+-Trasformare immagine in 8-bit
+-tool ImageJ sharpen usato due volte sulla immagine che rende il contrasto dei bordi tra cellula e sfondo piu evidente
+-trashold basso per catturare solamente la parte nera della cellula
+-riempire eventuali vuoti cosi da avere una maschera uniforme
+-pregare che possa funzionare
+
+In generale non capisco come automatizzare questa cosa mi sto per mettere a piangere non credo neanche sia possibile aiutatemi per favore
