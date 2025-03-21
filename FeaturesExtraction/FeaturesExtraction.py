@@ -56,26 +56,78 @@ def extract_geometric_features(gray, image, image_file):
     return features, image_contours
 
 def extract_haralick_features(gray):
-    return mahotas.features.haralick(gray).mean(axis=0)
+    return {"haralick": mahotas.features.haralick(gray).mean(axis=0)}
 
 def extract_hu_moments(gray):
     mom = moments(gray)
-    return moments_hu(mom)
+    return {"hu_moments": moments_hu(mom)}
 
 def extract_zernike_moments(gray, image_file):
     zernike_features = mahotas.features.zernike_moments(gray, radius=1000, degree=8)
     if np.all(zernike_features == 0):
         print(f"⚠️ Zernike momenti nulli per {image_file}, verifica l'immagine!")
         cv2.imwrite(f"error_{image_file}", gray)
-    return zernike_features
+    return {"zernike_moments": zernike_features}
 
 def extract_lbp_features(gray):
     P, R = 52, 2
     lbp = local_binary_pattern(gray, P=P, R=R, method="uniform")
     hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), density=True)
-    return hist
+    return {"lbp": hist}
 
-def process_images_csv(gray_images, masked_images, contours = False):
+def process_images(gray_images, masked_images, contours = False):
+    data = {}
+    for image_path in masked_images:
+
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"⚠️ Errore nel caricamento di {image_path}!")
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        mask_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        features = {}
+
+        # Questo codice estrae feature geometriche dalle immagini per analizzare la forma degli oggetti.
+        # Poiché queste feature si basano sulla struttura e sulla geometria dell'oggetto, utilizziamo immagini binarie (maschere),
+        # che forniscono una rappresentazione chiara senza interferenze cromatiche.
+                
+        # Estrazione delle feature geometriche basate sulla forma e struttura dell'oggetto.
+        geo_features, image_contours = extract_geometric_features(mask_gray, image, image_path)
+        features.update(geo_features)
+
+        # I momenti invarianti di Hu descrivono la forma dell'oggetto indipendentemente da rotazione, scala e traslazione.
+        features.update(extract_hu_moments(mask_gray))
+
+        # I momenti di Zernike catturano la simmetria e la complessità della forma.
+        features.update(extract_zernike_moments(mask_gray, image_path))
+
+        if contours:
+            if not os.path.exists("Images"):
+                os.makedirs("Images")
+            output_path = os.path.join("Images/", f"contours_{(image_path.split('/')[-1])[0:-4]}.png")
+            cv2.imwrite(output_path, image_contours)
+        data[image_path.split('/')[-1]] = features
+
+    for image_path in gray_images:
+        features = {}
+        # Estrazione delle feature basate sulla texture dell'immagine.
+        # Poiché queste caratteristiche dipendono dalla variazione locale dei pixel e dai pattern presenti nella superficie dell'oggetto,
+        # utilizziamo immagini in scala di grigi per catturare meglio le differenze di intensità senza l'influenza del colore.
+
+        # Le feature di Haralick analizzano la co-occorrenza dei pixel per descrivere la texture dell'immagine.
+        features.update(extract_haralick_features(gray))
+
+        # LBP (Local Binary Pattern) cattura pattern locali di texture basandosi sulle differenze di intensità tra pixel vicini.
+        features.update(extract_lbp_features(gray))
+
+        data[image_path.split('/')[-1]].update(features)
+
+    filename = "dati.json"
+    with open(filename, "w") as file:
+        json.dump(data, file, indent=4, cls=NumpyEncoder)
+    print(f"Dati salvati in {filename}")
+
+def process_images_csv(gray_images, masked_images):
     if not os.path.exists("./Features"):
         os.makedirs("./Features")
 
@@ -93,36 +145,18 @@ def process_images_csv(gray_images, masked_images, contours = False):
         geo_features, image_contours = extract_geometric_features(masked_image, gray_image, masked_path)
         for val in geo_features.values():
             features += str(val) + "\n"
-
+        
         # I momenti invarianti di Hu descrivono la forma dell'oggetto indipendentemente da rotazione, scala e traslazione.
-        for val in extract_hu_moments(masked_image):
-            features += str(val) + "\n"
-
-        # I momenti di Zernike catturano la simmetria e la complessità della forma.
-        zernike_moments = extract_zernike_moments(masked_image, masked_path)
-        for val in zernike_moments:
-            features += str(val) + "\n"
-
-        # Estrazione delle feature basate sulla texture dell'immagine.
-        # Poiché queste caratteristiche dipendono dalla variazione locale dei pixel e dai pattern presenti nella superficie dell'oggetto,
-        # utilizziamo immagini in scala di grigi per catturare meglio le differenze di intensità senza l'influenza del colore.
-
-        # Le feature di Haralick analizzano la co-occorrenza dei pixel per descrivere la texture dell'immagine.
-        for val in extract_haralick_features(gray_image):
+        for val in moments(masked_image):
             features += str(val) + "\n"
         
-        # LBP (Local Binary Pattern) cattura pattern locali di texture basandosi sulle differenze di intensità tra pixel vicini.
-        for val in extract_lbp_features(gray_image):
+        # I momenti di Zernike catturano la simmetria e la complessità della forma.
+        zernike_moments = extract_zernike_moments(masked_image, masked_path)
+        for val in zernike_moments.values():
             features += str(val) + "\n"
 
         with open(file_name, 'w', newline='') as file:
             file.write(features)
-
-        if contours:
-            if not os.path.exists("Images"):
-                os.makedirs("Images")
-            output_path = os.path.join("Images/", f"contours_{(gray_path.split('/')[-1])[0:-4]}.png")
-            cv2.imwrite(output_path, image_contours)
 
 def display_random_images(folder, num_images=9):
         image_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".png")]
@@ -161,15 +195,22 @@ def create_dataset(images_dir):
 if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1] == "-v":
-        features_folder = "./Features"
-        first_file = os.listdir(features_folder)[0]
-        with open(os.path.join(features_folder, first_file), 'r') as file:
-            features_list = [line.strip() for line in file]
-        print(len(features_list))
+        with open("dati.json") as file:
+            data = json.load(file)
+            campione = data[list(data.keys())[0]]
+            total = 0
+            for key, value in campione.items():
+                try:
+                    numero_feature = len(list(value))
+                except:
+                    numero_feature = 1
 
+                print(f"{key}: {numero_feature}")
+                total += numero_feature
+            print(f"Totale: {total}")    
     
 
-        #display_random_images("Images")
+        display_random_images("Images")
     
     else:
         images_dir = "/home/francesco/Scaricati/Dataset/Images/test"
@@ -192,4 +233,4 @@ if __name__ == "__main__":
             
         print(f"Immagini trovate: {len(mask_files)}")
         print(mask_dir)
-        process_images_csv(image_files, mask_files, contours=True)
+        process_images_csv(image_files, mask_files)

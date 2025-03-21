@@ -52,7 +52,7 @@ def maskMaker(input_directory, output_directory):
     # Applica la funzione auto_local_threshold_median a ciascuna immagine selezionata
     for image_path in image_paths:
         image = auto_local_threshold_median(image_path[1])
-        new_name = image_path[0][:-4] + "-BG" + image_path[0][-4:]
+        new_name = image_path[0][:-4] + "" + image_path[0][-4:]
 
         # Controlla e crea la directory di salvataggio se non esiste
         output_dir = f"{output_directory}/{image_path[2]}"
