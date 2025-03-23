@@ -45,10 +45,10 @@ def extract_geometric_features(gray, image, image_file):
         circularity = 4 * np.pi * (features["total_area"] / (features["total_perimeter"] ** 2)) if features["total_perimeter"] != 0 else 0
         features["circularity"] = circularity
 
-        if eccentricities:
+        """if eccentricities:
             features["mean_eccentricity"] = np.mean(eccentricities)
         else:
-            features["mean_eccentricity"] = 0
+            features["mean_eccentricity"] = 0"""
 
         
     else:
@@ -76,23 +76,24 @@ def extract_lbp_features(gray):
     return hist
 
 def process_images_csv(gray_images, masked_images, contours = False):
-    if not os.path.exists("./Features"):
-        os.makedirs("./Features")
-
     for gray_path, masked_path in zip (gray_images, masked_images):
         features = ""
         gray_image = cv2.imread(gray_path, cv2.IMREAD_GRAYSCALE)
         masked_image = cv2.imread(masked_path, cv2.IMREAD_GRAYSCALE)
-        file_name = "./Features/" + masked_path.split('/')[-1][0:-4] + ".csv"
+        dir_name = f"./Features/{masked_path.split('/')[-2]}/"
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        file_name = dir_name + masked_path.split('/')[-1][0:-4] + ".csv"
 
         # Questo codice estrae feature geometriche dalle immagini per analizzare la forma degli oggetti.
         # Poiché queste feature si basano sulla struttura e sulla geometria dell'oggetto, utilizziamo immagini binarie (maschere),
         # che forniscono una rappresentazione chiara senza interferenze cromatiche.
                 
         # Estrazione delle feature geometriche basate sulla forma e struttura dell'oggetto.
-        geo_features, image_contours = extract_geometric_features(masked_image, gray_image, masked_path)
+        """geo_features, image_contours = extract_geometric_features(masked_image, gray_image, masked_path)
         for val in geo_features.values():
             features += str(val) + "\n"
+        """
 
         # I momenti invarianti di Hu descrivono la forma dell'oggetto indipendentemente da rotazione, scala e traslazione.
         for val in extract_hu_moments(masked_image):
@@ -106,7 +107,7 @@ def process_images_csv(gray_images, masked_images, contours = False):
         # Estrazione delle feature basate sulla texture dell'immagine.
         # Poiché queste caratteristiche dipendono dalla variazione locale dei pixel e dai pattern presenti nella superficie dell'oggetto,
         # utilizziamo immagini in scala di grigi per catturare meglio le differenze di intensità senza l'influenza del colore.
-
+        
         # Le feature di Haralick analizzano la co-occorrenza dei pixel per descrivere la texture dell'immagine.
         for val in extract_haralick_features(gray_image):
             features += str(val) + "\n"
@@ -115,14 +116,15 @@ def process_images_csv(gray_images, masked_images, contours = False):
         for val in extract_lbp_features(gray_image):
             features += str(val) + "\n"
 
+        
         with open(file_name, 'w', newline='') as file:
             file.write(features)
 
-        if contours:
+        """if contours:
             if not os.path.exists("Images"):
                 os.makedirs("Images")
             output_path = os.path.join("Images/", f"contours_{(gray_path.split('/')[-1])[0:-4]}.png")
-            cv2.imwrite(output_path, image_contours)
+            cv2.imwrite(output_path, image_contours)"""
 
 def display_random_images(folder, num_images=9):
         image_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".png")]
@@ -172,9 +174,9 @@ if __name__ == "__main__":
         #display_random_images("Images")
     
     else:
-        images_dir = "/home/francesco/Scaricati/Dataset/Images/test"
+        images_dir = "/home/francesco/Scaricati/Dataset/Images/train_clustershcf"
         dataset_path = "./DataSet"
-        create_dataset(images_dir)
+        """create_dataset(images_dir)"""
 
         image_dir = os.path.join(dataset_path, "GrayImages")
         mask_dir = os.path.join(dataset_path, "MaskedImages")
@@ -185,11 +187,12 @@ if __name__ == "__main__":
                 if file.endswith(".tif"):
                     mask_files.append(os.path.join(root, file))
 
+        print(f"Immagini trovate: {len(mask_files)}")
+
         for root, dirs, files in os.walk(image_dir):
             for file in files:
                 if file.endswith(".tif"):
                     image_files.append(os.path.join(root, file))
             
-        print(f"Immagini trovate: {len(mask_files)}")
-        print(mask_dir)
+        print(f"Immagini trovate: {len(image_files)}")
         process_images_csv(image_files, mask_files, contours=True)
