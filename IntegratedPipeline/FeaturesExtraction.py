@@ -90,10 +90,9 @@ def process_images_csv(gray_images, masked_images, contours = False):
         # che forniscono una rappresentazione chiara senza interferenze cromatiche.
                 
         # Estrazione delle feature geometriche basate sulla forma e struttura dell'oggetto.
-        """geo_features, image_contours = extract_geometric_features(masked_image, gray_image, masked_path)
+        geo_features, image_contours = extract_geometric_features(masked_image, gray_image, masked_path)
         for val in geo_features.values():
             features += str(val) + "\n"
-        """
 
         # I momenti invarianti di Hu descrivono la forma dell'oggetto indipendentemente da rotazione, scala e traslazione.
         for val in extract_hu_moments(masked_image):
@@ -120,11 +119,11 @@ def process_images_csv(gray_images, masked_images, contours = False):
         with open(file_name, 'w', newline='') as file:
             file.write(features)
 
-        """if contours:
+        if contours:
             if not os.path.exists("Images"):
                 os.makedirs("Images")
             output_path = os.path.join("Images/", f"contours_{(gray_path.split('/')[-1])[0:-4]}.png")
-            cv2.imwrite(output_path, image_contours)"""
+            cv2.imwrite(output_path, image_contours)
 
 def display_random_images(folder, num_images=9):
         image_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".png")]

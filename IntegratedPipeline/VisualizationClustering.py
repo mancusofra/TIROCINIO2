@@ -15,7 +15,7 @@ if __name__ == "__main__":
         check_nans(data_dir, X_scaled)
 
     choice = input("Do you want to use extracted features or database features?: ").strip().lower()
-    if choice == "1":
+    if ch oice == "1":
         data_dir = "Features/"
     elif choice == "2":
         data_dir = "/home/francesco/Scaricati/Dataset/hand_crafted_features/train_clustershcf/"
