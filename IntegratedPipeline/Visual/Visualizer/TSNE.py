@@ -5,39 +5,6 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def load_data(data_dir):
-    all_data = []
-    for class_name in os.listdir(data_dir):
-        class_path = os.path.join(data_dir, class_name)
-        if os.path.isdir(class_path):
-            for filename in os.listdir(class_path):
-                if filename.endswith(".csv"):
-                    file_path = os.path.join(class_path, filename)
-                    df = pd.read_csv(file_path, header=None)
-                    feature_vector = df.values.flatten()
-                    sample_df = pd.DataFrame([feature_vector])
-                    sample_df["object_name"] = os.path.splitext(filename)[0]
-                    sample_df["class"] = class_name
-                    all_data.append(sample_df)
-    return pd.concat(all_data, ignore_index=True)
-
-def standardize_data(X):
-    scaler = StandardScaler()
-    return scaler.fit_transform(X)
-
-def check_nans(data_dir, X_scaled):
-    print("Ci sono NaN?", pd.DataFrame(X_scaled).isna().any().any())
-    print("Quante colonne con NaN:", pd.DataFrame(X_scaled).isna().sum().sum())
-    for class_name in os.listdir(data_dir):
-        class_path = os.path.join(data_dir, class_name)
-        if os.path.isdir(class_path):
-            for filename in os.listdir(class_path):
-                if filename.endswith(".csv"):
-                    file_path = os.path.join(class_path, filename)
-                    df = pd.read_csv(file_path, header=None)
-                    if df.isna().any().any():
-                        print(f"❗ File con NaN: {file_path}")
-
 def apply_and_plot_tsne(X_scaled, labels, n_components=2, perplexity=5, learning_rate=200, n_iter=1000):
     plt.close('all')
     tsne = TSNE(n_components=n_components, perplexity=perplexity, learning_rate=learning_rate, n_iter=n_iter, random_state=42)
@@ -72,11 +39,9 @@ def apply_and_plot_tsne(X_scaled, labels, n_components=2, perplexity=5, learning
         plt.title('Visualizzazione t-SNE (2D)')
 
     plt.legend()
-    plt.show()
+    plt.show(block=False)
 
     return X_tsne
-
-
 
 if __name__ == "__main__":
     #data_dir = "/home/francesco/Scaricati/Dataset/hand_crafted_features/train_clustershcf/"
