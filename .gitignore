@@ -1,7 +1,7 @@
-#Ingore PyCache
+# Ignore python cache files
 __pycache__/
 
 # Ignore environment files
 ambiente_tirocinio2/
-Data/
+DataSet/
 Features/
