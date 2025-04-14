@@ -3,5 +3,5 @@ __pycache__/
 
 # Ignore environment files
 ambiente_tirocinio2/
-DataSet/
+Data/
 Features/
