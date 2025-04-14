@@ -7,6 +7,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDis
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from scipy.stats import mode
 from sklearn.feature_selection import VarianceThreshold
+from kneed import KneeLocator
+
 
 def load_data(data_dir):
     all_data = []
@@ -65,9 +67,33 @@ def run_kmeans_pipeline(data_dir, plot_confusion=True, var_threshold=0.01):
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=encoder.classes_)
         disp.plot(cmap=plt.cm.Blues)
         plt.title("Confusion Matrix")
-        plt.show()
+        plt.show(block=False)
 
     return accuracy
+
+def elbow_method(data_dir, max_k=10):
+    """Trova automaticamente il numero ottimale di cluster usando il metodo del gomito."""
+    # 1. Carica i dati
+    full_df = load_data(data_dir)
+    X = full_df.select_dtypes(include='number')
+    y = full_df["class"]
+
+    # 2. Preprocessing: scaling
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # 3. Calcolo SSE per k=1 a max_k
+    sse = []
+    for k in range(1, max_k + 1):
+        kmeans = KMeans(n_clusters=k, random_state=0)
+        kmeans.fit(X_scaled)
+        sse.append(kmeans.inertia_)
+
+    # 4. Individua il gomito
+    kl = KneeLocator(range(1, max_k + 1), sse, curve="convex", direction="decreasing")
+    optimal_k = kl.elbow
+
+    return optimal_k
 
 if __name__ == "__main__":
     data_dir = "/home/francesco/TIROCINIO2/IntegratedPipeline/Data/DataSet"

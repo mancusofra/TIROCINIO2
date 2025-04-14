@@ -1,6 +1,7 @@
 import numpy as np
 from skimage.measure import moments, moments_hu
 
+
 def extract_hu_moments(gray):
     # Compute Hu Moments, which are seven values derived from image moments.
     # They capture the shape of objects and are invariant to translation, rotation, and scaling,

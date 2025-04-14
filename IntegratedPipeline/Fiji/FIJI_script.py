@@ -4,10 +4,10 @@ import os
 for tipo in ["positive", "negative", "condensed", "multiple"]:
     print("Tipo:", tipo)
     # === Percorsi ===
-    input_dir = "/home/francesco/Scaricati/Dataset/Images/train_clustershcf/{}/".format(tipo)
-    output_kill_dir = "/home/francesco/DataSet/GrayImages/{}/".format(tipo)
-    output_mask_dir = "/home/francesco/DataSet/MaskedImages/{}/".format(tipo)
-
+    input_dir = "/home/francesco/Scaricati/Dataset/Images/test/{}/".format(tipo)
+    output_kill_dir = "/home/francesco/TIROCINIO2/IntegratedPipeline/Data/DataSet_test/GrayImages/{}/".format(tipo)
+    output_mask_dir = "/home/francesco/TIROCINIO2/IntegratedPipeline/Data/DataSet_test/MaskedImages/{}/".format(tipo)
+    
     # Crea le cartelle di output se non esistono
     for dir_path in [output_kill_dir, output_mask_dir]:
         if not os.path.exists(dir_path):
@@ -39,7 +39,7 @@ for tipo in ["positive", "negative", "condensed", "multiple"]:
         
         # Converti in 8-bit prima della sogliatura
         IJ.run(imp_kill, "8-bit", "")
-        IJ.setRawThreshold(imp_kill, 5, 255)
+        IJ.setRawThreshold(imp_kill, 15, 255)
         IJ.run(imp_kill, "Convert to Mask", "")
         IJ.saveAs(imp_kill, "Tiff", output_mask_path)
         print("Salvato (Maschera):", output_mask_path)

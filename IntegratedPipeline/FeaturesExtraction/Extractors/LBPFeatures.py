@@ -1,7 +1,10 @@
 import numpy as np
 from skimage.feature import local_binary_pattern
 
-def extract_lbp_features(gray):
+
+def extract_lbp_features(gray, 
+    P = 8,
+    R = 1):   
     # Compute Local Binary Pattern (LBP) features, which are simple yet powerful descriptors
     # for capturing local texture information in an image.
     #
@@ -13,8 +16,6 @@ def extract_lbp_features(gray):
     # We normalize the histogram (density=True) to get a texture feature vector that is invariant to image size.
     #
     # This vector summarizes the frequency of texture patterns across the image.
-    
-    P, R = 8, 1
     lbp = local_binary_pattern(gray, P=P, R=R, method="uniform")
     hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), density=True)
     return hist

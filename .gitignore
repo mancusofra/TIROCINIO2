@@ -1,8 +1,7 @@
+#Ingore PyCache
+__pycache__/
+
 # Ignore environment files
 ambiente_tirocinio2/
-log.txt
-MaskedImages/
-Images/
-DataSet/
+Data/
 Features/
-KilledBorder/
