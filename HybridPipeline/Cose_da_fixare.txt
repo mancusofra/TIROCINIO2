@@ -1,0 +1,5 @@
+-Se avvio la routine di estrazione delle feature senza aver pre processato le immagini mi deve dare errore!!!
+-Features ancora troppo poco descrittive. la certezza con cui fkm attribusice una label giusta non e molto superiore da quella con cui assegna una leable sbagliata.
+    - aumentare feature
+    - migliorare feature attuali
+    - deep feature con CNN pre addestrata???

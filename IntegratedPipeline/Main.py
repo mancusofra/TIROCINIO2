@@ -1,8 +1,8 @@
 from FeaturesExtraction.FeaturesExtraction import *
 from KMeans.PrecisionCalculatore import *
 from RForest.RandomForest import *
-from Visual.VisualizaztionClustering import *
-import os
+from Visual import VisualizationClustering
+import os,sys
 #from Visual.VisualizaztionClustering import *
 
 def rf_pipeline(train_dir, test_dir, n_trees=10):
@@ -22,7 +22,7 @@ def menu():
         print("1. Features extraction")
         print("2. Run KMeans Pipeline")
         print("3. Random Forest Fitting pipeline (10 trees)")  
-        print("4. Accuracy Calculator")
+        print("4. Cluster visualization")
         print("5. Exit")
 
         choice = input("Enter your choice: ")
@@ -69,6 +69,7 @@ def menu():
                 continue
             gold_dir = "/home/francesco/Scaricati/Dataset/hand_crafted_features/train_clustershcf"
 
+            VisualizationClustering.menu(features_dir, gold_dir)
 
         elif choice == '5':
             sys.exit()

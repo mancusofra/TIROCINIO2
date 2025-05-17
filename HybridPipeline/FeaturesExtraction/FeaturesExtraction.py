@@ -7,6 +7,7 @@ from .Extractors.ZernikeFeatures import extract_zernike_moments
 from .Extractors.HaralickFeatures import extract_haralick_features
 from .Extractors.LBPFeatures import extract_lbp_features
 from .Extractors.GrayHistFeatures import extract_gray_hist_features
+from tqdm import tqdm
 
 
 def file_extraction(input_dir, Verbose=False):
@@ -35,7 +36,7 @@ def file_extraction(input_dir, Verbose=False):
 
 
 def features_extraction(gray_images, masked_images, features_dir="./Data/Features/", params = None):
-    for gray_path, masked_path in zip(gray_images, masked_images):
+    for gray_path, masked_path in tqdm(zip(gray_images, masked_images), total=len(gray_images), desc=f"Extracting {features_dir.split('/')[-2]}"):
 
         features = ""
         # Convert files to 8-bit format required for feature extraction operations
