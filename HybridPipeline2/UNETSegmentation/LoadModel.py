@@ -57,7 +57,7 @@ if __name__ == "__main__":
     model_path = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Model/Weights.pt"
     model = load_model(model_path)
 
-    train_annotated_path = '/home/francesco/TIROCINIO2/HybridPipeline2/Data/Train_annotated/'
+    train_annotated_path = '/home/francesco/TIROCINIO2/HybridPipeline2/Data/Original_images/Train_annotated/'
     train_annotated_list = []
     for root, dirs, files in os.walk(train_annotated_path):
         for file in files:

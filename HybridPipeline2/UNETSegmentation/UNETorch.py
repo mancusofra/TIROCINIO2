@@ -116,7 +116,7 @@ def create_df(data_dir):
     print(len(masks_paths))
 
     for i in masks_paths:
-        images_paths.append(i.replace('/Mask/', '/Train_annotated/'))
+        images_paths.append(i.replace('/Mask/', '/Original_images/Train_annotated/'))
 
     print(len(images_paths))
     for img_path in images_paths:
@@ -254,15 +254,15 @@ def plot_loss(history):
     plt.plot(history['train_loss'], label='Training loss')
     plt.plot(history['val_loss'], label='Validation loss')
     plt.legend()
-    plt.show()
-    plt.close()
+    plt.show(block = False)
+    #plt.close()
 
     plt.figure(figsize=(7, 7))
     plt.plot(history['val_IoU'], label='Validation mean Jaccard index')
     plt.plot(history['val_dice'], label='Validation Dice coefficient')
     plt.legend()
-    plt.show()
-    plt.close()
+    plt.show(block = False)
+    #plt.close()
 
 def plot_test_evaluation(test_loader, test_dataset, model, loss_fn):
     with torch.no_grad():
@@ -346,6 +346,7 @@ def train_model(data_dir):
     return training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn, lr_scheduler)
 
 def load_and_plot():
+    data_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Mask/"
     df = create_df(data_dir)
     train_df, valid_df, test_df = split_df(df)
 

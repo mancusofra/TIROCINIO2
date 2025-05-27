@@ -1,4 +1,7 @@
 import os, cv2, torch
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 
 # Features Extraction Modules
 from .Extractors.GeometricFeatures import extract_geometric_features
@@ -9,6 +12,7 @@ from .Extractors.LBPFeatures import extract_lbp_features
 from .Extractors.GrayHistFeatures import extract_gray_hist_features
 
 from HybridPipeline2.UNETSegmentation.LoadModel import load_model, predict, show_image
+import glob
 
 def file_extraction(input_dir, Verbose=False):
     image_dir = os.path.join(input_dir, "GrayImages")
@@ -34,7 +38,7 @@ def file_extraction(input_dir, Verbose=False):
 
     return mask_files, image_files
 
-def features_extraction(gray_images, masked_images, features_dir="./Data/Features/", params = None):
+def features_extraction(gray_images, masked_images, features_dir="./Data/Features", params = None):
     for gray_path, masked_path in tqdm(zip(gray_images, masked_images), total=len(gray_images), desc=f"Extracting {features_dir.split('/')[-2]}"):
 
         features = ""
@@ -43,7 +47,7 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
         masked_image = cv2.imread(masked_path, cv2.IMREAD_GRAYSCALE)
 
         # Define output path for CSV files
-        dir_name = f"{features_dir}{masked_path.split('/')[-2]}/"
+        dir_name = f"{features_dir}/{masked_path.split('/')[-2]}/"
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
         file_name = dir_name + masked_path.split('/')[-1][0:-4] + ".csv"
@@ -108,7 +112,6 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
     return features_dir
 
 def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=False, test = False):
-
     model = load_model(model_path)
 
     if test: 
@@ -116,7 +119,7 @@ def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=Fa
 
     subdirs = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
 
-    for subdir in subdirs:
+    for subdir in tqdm(subdirs):
         output_mask_path = f"{output_dir}/MaskedImages/{subdir}/"
         if not os.path.exists(output_mask_path):
             os.makedirs(output_mask_path)
@@ -144,19 +147,76 @@ def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=Fa
         num_files = sum([len(files) for _, _, files in os.walk(output_mask_path)])
         if verbose:
             print(f"Number of files in {output_mask_path}: {num_files}")
-    
 
+def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
+
+    if test: 
+        output_dir = input_dir + "_test/GrayImages"
+        input_dir = input_dir + "_test/MaskedImages"
+    else:
+        output_dir = input_dir + "/GrayImages"
+        input_dir = input_dir + "/MaskedImages"
+
+    
+    subdirs = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
+    
+    for subdir in subdirs:
+        output_gray_dir = f"{output_dir}/{subdir}"
+        input_gray_dir = f"{input_dir}/{subdir}"
+        rgb_subdir = f"{rgb_dir}/{subdir}"
+
+        if not os.path.exists(output_gray_dir):
+            os.makedirs(output_gray_dir)
+
+        tif_files = [f for f in os.listdir(input_gray_dir) if f.endswith('.tif')]
+        rgb_tif_files = [f for f in os.listdir(rgb_subdir) if f.endswith('.tif')]
+
+        # Assumiamo che i nomi corrispondano
+        for mask_name, rgb_name in zip(sorted(tif_files), sorted(rgb_tif_files)):
+            mask_path = os.path.join(input_gray_dir, mask_name)
+            rgb_path = os.path.join(rgb_subdir, rgb_name)
+
+            # Carica immagini
+            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+            rgb = cv2.imread(rgb_path)
+
+            # Assicura che le dimensioni corrispondano
+            if mask.shape != rgb.shape[:2]:
+                print(f"Dimension mismatch: {mask_name} vs {rgb_name}")
+                continue
+
+            # Crea maschera binaria (valori 0 e 1)
+            binary_mask = (mask > 0).astype(np.uint8)
+
+            # Espandi a 3 canali per mascherare RGB
+            binary_mask_3c = cv2.merge([binary_mask]*3)
+
+            # Applica la maschera all'immagine RGB
+            masked_rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
+
+            # Salva
+            cv2.imwrite(f"{output_gray_dir}/{mask_name}", masked_rgb)
+
+def full_dataset_maker(input_dir, output_dir, masked_dir, features_dir,  model_path, verbose=False, test = False):
+    mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=verbose, test=test) 
+    gray_dataset_maker(output_dir, input_dir, verbose=verbose, test=test)
+
+    if test:
+        features_dir = features_dir + "_test"
+        output_dir = output_dir + "_test"
+
+    mask_files, image_files = file_extraction(output_dir, Verbose=verbose)
+    features_dir = features_extraction(image_files, mask_files, features_dir=features_dir)
+    return features_dir
+    
 if __name__ == "__main__":
 
     masked_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Mask"
-    input_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Train_annotated"
+    input_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Original_images/Train_annotated"
+    input_dir_test = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Original_images/test"
     output_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/DataSet"
     model_path = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Model/Weights.pt"
+    features_dir = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Features"
 
-    mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose = True)
-
-    # dataset_path = "../DataSet"
-    # mask_files, image_files = file_extraction(dataset_path, Verbose=True)
-
-    # features_dir = features_extraction(image_files, mask_files)
-    # print(features_dir)
+    full_dataset_maker(input_dir, output_dir, masked_dir, features_dir, model_path, verbose = False, test = False)
+    full_dataset_maker(input_dir_test, output_dir, masked_dir, features_dir, model_path, verbose = False, test = True)
