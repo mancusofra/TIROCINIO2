@@ -3,9 +3,12 @@ from .FuzzyKM import FuzzyClustering, AccuracyCalculator, UnsupervisedAssistedFi
 from .RandomForestClassifier import FitRandomForest, ModelAccuracy
 from .UNETSegmentation import UNETorch
 from .FeaturesExtraction import FeaturesExtraction
+from .Viusalizer import PCA
 
 import matplotlib.pyplot as plt
 import os, platform
+from sklearn.preprocessing import StandardScaler
+
 
 # Function for clearing terminal
 def clear_terminal():
@@ -82,13 +85,12 @@ def menu():
     while True:
         clear_terminal()
         choice = input("Enter your choice: ")
+        
         if choice == '1':
             if confirm_long_operation():
                 history = UNETorch.train_model(data_dir)
                 with open("Data/Model/history.pkl", "wb") as f:
                     pickle.dump(history, f)
-        
-
             pass
         
         elif choice == '2':
@@ -105,6 +107,38 @@ def menu():
             FeaturesExtraction.full_dataset_maker(input_dir, output_dir, masked_dir, features_dir, model_path, verbose = False, test = False)
             FeaturesExtraction.full_dataset_maker(input_dir_test, output_dir, masked_dir, features_dir, model_path, verbose = False, test = True)
         
+        elif choice == '4':
+            extracted_dir = "/home/francesco/TIROCINIO2/IntegratedPipeline/Data/Features"
+            full_df = LoadData.load_data(extracted_dir)
+            X = full_df.select_dtypes(include='number')
+            X_scaled = StandardScaler().fit_transform(X)
+            labels = full_df["class"]
+
+            PCA.apply_and_plot_pca(X_scaled, labels)
+
+        elif choice == '5':
+            Feature_dir_train = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Features/"
+            Feature_dir_test = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Features_test/"
+            full_df = LoadData.load_data(Feature_dir_train)
+            FuzzyClustering.fuzzy_kmeans(full_df, n_clusters=4, verbose=False)
+            shuffled_df = ShuffleData.shuffle_data(full_df, p=0.3)
+            filtrered_df = get_filtered_df(shuffled_df, threshold=0.85)
+
+            rfc_full = FitRandomForest.fit_random_forest(full_df, n_trees=10)
+            rfc_shuffled = FitRandomForest.fit_random_forest(shuffled_df, n_trees=100)
+            rfc_filtered = FitRandomForest.fit_random_forest(filtrered_df, n_trees=100)
+
+            df_test = LoadData.load_data(Feature_dir_test)
+            accuracy_full = ModelAccuracy.accuracy_calculator(df_test, rfc_full)
+            accuracy_shuffled = ModelAccuracy.accuracy_calculator(df_test, rfc_shuffled)
+            accuracy_filtered = ModelAccuracy.accuracy_calculator(df_test, rfc_filtered)
+
+            print(f"Accuracy with full data: {accuracy_full}")
+            print(f"Accuracy with shuffled data: {accuracy_shuffled}")
+            print(f"Accuracy with filtered data: {accuracy_filtered}\n\n")
+            print(f"Delta accuracy filtered - unfiletered: {accuracy_filtered - accuracy_shuffled}")
+            input("Enter to continue . . .")
+
         elif choice == '0':
             break
         else:
@@ -113,28 +147,5 @@ def menu():
 if __name__ == "__main__":
 
     menu()
-    # for i in range(1, 5):
-    #     plot_different_th(i/10)
-    # input("Press Enter to continue...")
 
-    # Feature_dir_train = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Features/"
-    # Feature_dir_test = "/home/francesco/TIROCINIO2/HybridPipeline2/Data/Features_test/"
-    # full_df = LoadData.load_data(Feature_dir_train)
-    # FuzzyClustering.fuzzy_kmeans(full_df, n_clusters=4, verbose=True)
-    # shuffled_df = ShuffleData.shuffle_data(full_df, p=0.2)
-    # filtrered_df = get_filtered_df(shuffled_df, threshold=0.85)
-
-    # rfc_full = FitRandomForest.fit_random_forest(full_df, n_trees=10)
-    # rfc_shuffled = FitRandomForest.fit_random_forest(shuffled_df, n_trees=10)
-    # rfc_filtered = FitRandomForest.fit_random_forest(filtrered_df, n_trees=10)
-
-    # df_test = LoadData.load_data(Feature_dir_test)
-    # accuracy_full = ModelAccuracy.accuracy_calculator(df_test, rfc_full)
-    # accuracy_shuffled = ModelAccuracy.accuracy_calculator(df_test, rfc_shuffled)
-    # accuracy_filtered = ModelAccuracy.accuracy_calculator(df_test, rfc_filtered)
-
-    # print(f"Accuracy with full data: {accuracy_full}")
-    # print(f"Accuracy with shuffled data: {accuracy_shuffled}")
-    # print(f"Accuracy with filtered data: {accuracy_filtered}")
-    # print(f"\n\nDelta accuracy filtered - unfiletered: {accuracy_filtered - accuracy_shuffled}")
 
