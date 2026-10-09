@@ -1,0 +1,25 @@
+# Core dependencies of YeastVacuolePipeline (see YeastVacuolePipeline/ and README.md).
+# Versions are not pinned: the original environment (ambiente_tirocinio2/) was never
+# committed, so these are the package names actually imported by the code, unpinned.
+
+numpy
+pandas
+scipy
+scikit-learn
+scikit-image
+scikit-fuzzy
+opencv-python
+matplotlib
+seaborn
+tqdm
+mahotas
+kneed
+
+# Deep learning: U-Net segmentation exists in two variants (see
+# YeastVacuolePipeline/UNETSegmentation/) — Keras/TensorFlow and PyTorch.
+# Only the one you intend to run needs to be installed.
+tensorflow
+torch
+torchvision
+segmentation-models-pytorch
+albumentations
