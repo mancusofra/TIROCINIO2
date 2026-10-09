@@ -1,5 +1,9 @@
 # Yeast Vacuole Image Classification
 
+[![CI](https://github.com/mancusofra/TIROCINIO2/actions/workflows/ci.yml/badge.svg)](https://github.com/mancusofra/TIROCINIO2/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 This project classifies yeast vacuole microscopy images into four morphological
 classes, comparing a hand-crafted-feature pipeline (segmentation → feature
 extraction → clustering-assisted filtering → classification) against the
@@ -18,6 +22,24 @@ Each image is cropped to a single yeast cell (80x80 px) and labeled with one of:
 yeast_vacuole_pipeline/ <- the pipeline (see below)
 requirements.txt       <- Python dependencies
 ```
+
+## Installation
+
+```
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt        # runtime (includes TensorFlow and PyTorch)
+pip install -r requirements-dev.txt    # pytest + ruff
+```
+
+## Development
+
+```
+ruff check . && ruff format --check .
+pytest
+```
+
+The test suite covers the non-deep-learning modules (data processing, fuzzy
+filtering, geometric features) and runs on every push via GitHub Actions.
 
 ## yeast_vacuole_pipeline
 
