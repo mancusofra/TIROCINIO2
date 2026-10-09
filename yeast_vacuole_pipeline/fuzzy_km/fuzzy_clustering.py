@@ -1,8 +1,9 @@
 import numpy as np
 import skfuzzy as fuzz
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
+
 from . import accuracy_calculator
+
 
 def fuzzy_kmeans(full_df, n_clusters, verbose=False):
     """
@@ -26,14 +27,11 @@ def fuzzy_kmeans(full_df, n_clusters, verbose=False):
         tuple: (u, y) — u is the best run's (n_clusters, n_samples)
         membership matrix, y is the (un-encoded) true 'class' labels.
     """
-    X = full_df.select_dtypes(include='number')
+    X = full_df.select_dtypes(include="number")
     y = full_df["class"]
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-
-    pca = PCA(n_components=10)
-    X_pca = pca.fit_transform(X_scaled).T  # transposed: skfuzzy expects features x samples
 
     X = X_scaled.T
     best_m = None
@@ -57,8 +55,11 @@ def fuzzy_kmeans(full_df, n_clusters, verbose=False):
 
     if verbose:
         print(f"Fuzziness parameter: {m}")
-        print(f"Accuracy: {accuracy_calculator.accuracy_calculator(y, u.argmax(axis=0), n_clusters)}")
-        print(f"Hungarian Accuracy: {accuracy_calculator.hungarian_accuracy(y, u.argmax(axis=0), n_clusters)}\n\n")
-
+        print(
+            f"Accuracy: {accuracy_calculator.accuracy_calculator(y, u.argmax(axis=0), n_clusters)}"
+        )
+        print(
+            f"Hungarian Accuracy: {accuracy_calculator.hungarian_accuracy(y, u.argmax(axis=0), n_clusters)}\n\n"
+        )
 
     return u, y

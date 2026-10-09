@@ -1,7 +1,8 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
-def fit_random_forest(full_df_train , n_trees= 10):
+
+def fit_random_forest(full_df_train, n_trees=10):
     """
     Trains a Random Forest classifier on the given feature DataFrame.
 
@@ -19,7 +20,7 @@ def fit_random_forest(full_df_train , n_trees= 10):
         RandomForestClassifier: The fitted model.
     """
     scaler = StandardScaler()
-    X_train = full_df_train.select_dtypes(include='number')
+    X_train = full_df_train.select_dtypes(include="number")
     X_train_norm = scaler.fit_transform(X_train)
     y_train = full_df_train["class"]
 

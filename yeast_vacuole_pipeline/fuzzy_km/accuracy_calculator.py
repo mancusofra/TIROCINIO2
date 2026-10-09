@@ -1,8 +1,8 @@
 import numpy as np
+from scipy.optimize import linear_sum_assignment
+from scipy.stats import mode
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.preprocessing import LabelEncoder
-from scipy.stats import mode
-from scipy.optimize import linear_sum_assignment
 
 
 def accuracy_calculator(y_true, y_pred, n_clusters):
@@ -25,13 +25,14 @@ def accuracy_calculator(y_true, y_pred, n_clusters):
     y_true = encoder.fit_transform(y_true)
     labels = np.zeros_like(y_pred)
     for i in range(n_clusters):
-        mask = (y_pred == i)
+        mask = y_pred == i
         if np.sum(mask) == 0:
             print(f"Cluster {i} is empty")
             continue
         labels[mask] = mode(y_true[mask], keepdims=True).mode[0]
 
     return accuracy_score(y_true, labels)
+
 
 def hungarian_accuracy(y_true, y_pred, n_clusters):
     """

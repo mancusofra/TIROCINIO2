@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import mode
 from sklearn.preprocessing import LabelEncoder
 
+
 def get_valid_elements(u, y_true, y_pred, n_clusters, threshold):
     """
     Flags samples to keep, dropping those the fuzzy clustering confidently
@@ -31,7 +32,7 @@ def get_valid_elements(u, y_true, y_pred, n_clusters, threshold):
     # Map each cluster to its most frequent true class
     cluster_to_class = {}
     for i in range(n_clusters):
-        mask = (y_pred == i)
+        mask = y_pred == i
         if np.sum(mask) == 0:
             continue
         cluster_to_class[i] = mode(y_true_encoded[mask], keepdims=True).mode[0]
@@ -46,7 +47,7 @@ def get_valid_elements(u, y_true, y_pred, n_clusters, threshold):
     mask_confident = certainties > threshold
 
     # True for samples where the unsupervised and expert classifications disagree
-    not_agree_mask = (y_pred_class != y_true_encoded)
+    not_agree_mask = y_pred_class != y_true_encoded
 
     # Bitwise AND of the two masks: True where the classifications DISAGREE
     # and the unsupervised classification is confident about it (per threshold)
@@ -54,6 +55,7 @@ def get_valid_elements(u, y_true, y_pred, n_clusters, threshold):
     valid_mask = ~combined_mask
 
     return valid_mask
+
 
 def get_valid_df(valid_mask, df):
     """

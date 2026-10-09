@@ -1,19 +1,20 @@
-import os, cv2, torch
-import matplotlib.pyplot as plt
-import numpy as np
+import os
 from pathlib import Path
+
+import cv2
+import numpy as np
 from tqdm import tqdm
+
+from yeast_vacuole_pipeline.unet_segmentation.load_model import load_model, predict
 
 # Features Extraction Modules
 from .extractors.geometric_features import extract_geometric_features
-from .extractors.hu_moments_features import extract_hu_moments
-from .extractors.zernike_features import extract_zernike_moments
-from .extractors.haralick_features import extract_haralick_features
-from .extractors.lbp_features import extract_lbp_features
 from .extractors.gray_hist_features import extract_gray_hist_features
+from .extractors.haralick_features import extract_haralick_features
+from .extractors.hu_moments_features import extract_hu_moments
+from .extractors.lbp_features import extract_lbp_features
+from .extractors.zernike_features import extract_zernike_moments
 
-from yeast_vacuole_pipeline.unet_segmentation.load_model import load_model, predict, show_image
-import glob
 
 def file_extraction(input_dir, Verbose=False):
     """
@@ -54,7 +55,8 @@ def file_extraction(input_dir, Verbose=False):
 
     return mask_files, image_files
 
-def features_extraction(gray_images, masked_images, features_dir="./Data/Features", params = None):
+
+def features_extraction(gray_images, masked_images, features_dir="./Data/Features", params=None):
     """
     Extracts the full feature set for each image pair and writes one CSV per
     sample under features_dir/<class>/<sample_name>.csv.
@@ -75,8 +77,11 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
     Returns:
         str: features_dir, unchanged (for chaining).
     """
-    for gray_path, masked_path in tqdm(zip(gray_images, masked_images), total=len(gray_images), desc=f"Extracting {features_dir.split('/')[-2]}"):
-
+    for gray_path, masked_path in tqdm(
+        zip(gray_images, masked_images),
+        total=len(gray_images),
+        desc=f"Extracting {features_dir.split('/')[-2]}",
+    ):
         features = ""
         # Convert files to 8-bit format required for feature extraction operations
         gray_image = cv2.imread(gray_path, cv2.IMREAD_GRAYSCALE)
@@ -86,12 +91,12 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
         dir_name = f"{features_dir}/{masked_path.split('/')[-2]}/"
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-        file_name = dir_name + masked_path.split('/')[-1][0:-4] + ".csv"
+        file_name = dir_name + masked_path.split("/")[-1][0:-4] + ".csv"
 
         # Geometric/shape features run on gray_image: background is already
         # zeroed out by gray_dataset_maker, so contours match the cell outline.
         geo_features = extract_geometric_features(gray_image)
-        
+
         for val in geo_features.values():
             features += str(val) + "\n"
 
@@ -109,7 +114,6 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
         else:
             zernike_features = extract_zernike_moments(masked_image)
 
-
         for val in zernike_features:
             features += str(val) + "\n"
 
@@ -124,7 +128,7 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
                 lpb_features = extract_lbp_features(gray_image, **lpb_params)
             else:
                 raise ValueError("Invalid parameters for LBP features.")
-        
+
         else:
             lbp_features = extract_lbp_features(gray_image)
 
@@ -135,12 +139,13 @@ def features_extraction(gray_images, masked_images, features_dir="./Data/Feature
         for val in extract_gray_hist_features(gray_image):
             features += str(val) + "\n"
 
-        with open(file_name, 'w', newline='') as file:
+        with open(file_name, "w", newline="") as file:
             file.write(features)
 
     return features_dir
 
-def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=False, test = False):
+
+def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=False, test=False):
     """
     Builds output_dir/MaskedImages by reusing existing manual masks where
     available and predicting the rest with the U-Net segmentation model.
@@ -160,7 +165,7 @@ def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=Fa
     """
     model = load_model(model_path)
 
-    if test: 
+    if test:
         output_dir = output_dir + "_test"
 
     subdirs = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
@@ -173,28 +178,28 @@ def mask_dataset_maker(input_dir, output_dir, masked_dir, model_path, verbose=Fa
         subdir_path = os.path.join(input_dir, subdir)
         masked_subdir = os.path.join(masked_dir, subdir)
 
-        tif_files = [f for f in os.listdir(subdir_path) if f.endswith('.tif')]
-        masked_tif_files = [f for f in os.listdir(masked_subdir) if f.endswith('.tif')]
-        
+        tif_files = [f for f in os.listdir(subdir_path) if f.endswith(".tif")]
+        masked_tif_files = [f for f in os.listdir(masked_subdir) if f.endswith(".tif")]
+
         for f in tif_files:
-            if f not in  masked_tif_files:
+            if f not in masked_tif_files:
                 full_path = os.path.join(subdir_path, f)
                 predicted_f_mask = predict(model, full_path)
-                #show_image(predicted_f_mask)
-                
-                
-                cv2.imwrite(f"{output_mask_path}/{f}", predicted_f_mask*255)
+                # show_image(predicted_f_mask)
 
-            else:   
+                cv2.imwrite(f"{output_mask_path}/{f}", predicted_f_mask * 255)
+
+            else:
                 manual_f_mask = cv2.imread(f"{masked_subdir}/{f}", cv2.IMREAD_COLOR)
-                cv2.imwrite(f"{output_mask_path}/{f}", manual_f_mask)         
-        
-        #print(f"{count1} {count2}")
+                cv2.imwrite(f"{output_mask_path}/{f}", manual_f_mask)
+
+        # print(f"{count1} {count2}")
         num_files = sum([len(files) for _, _, files in os.walk(output_mask_path)])
         if verbose:
             print(f"Number of files in {output_mask_path}: {num_files}")
 
-def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
+
+def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test=False):
     """
     Builds the "GrayImages" set by masking each RGB image with its binary
     mask, so only the segmented cell remains (background zeroed out).
@@ -219,9 +224,8 @@ def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
         output_dir = input_dir + "/GrayImages"
         input_dir = input_dir + "/MaskedImages"
 
-    
     subdirs = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
-    
+
     for subdir in subdirs:
         output_gray_dir = f"{output_dir}/{subdir}"
         input_gray_dir = f"{input_dir}/{subdir}"
@@ -230,8 +234,8 @@ def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
         if not os.path.exists(output_gray_dir):
             os.makedirs(output_gray_dir)
 
-        tif_files = [f for f in os.listdir(input_gray_dir) if f.endswith('.tif')]
-        rgb_tif_files = [f for f in os.listdir(rgb_subdir) if f.endswith('.tif')]
+        tif_files = [f for f in os.listdir(input_gray_dir) if f.endswith(".tif")]
+        rgb_tif_files = [f for f in os.listdir(rgb_subdir) if f.endswith(".tif")]
 
         # Assumes filenames correspond after sorting
         for mask_name, rgb_name in zip(sorted(tif_files), sorted(rgb_tif_files)):
@@ -251,7 +255,7 @@ def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
             binary_mask = (mask > 0).astype(np.uint8)
 
             # Expand to 3 channels to mask the RGB image
-            binary_mask_3c = cv2.merge([binary_mask]*3)
+            binary_mask_3c = cv2.merge([binary_mask] * 3)
 
             # Apply the mask to the RGB image
             masked_rgb = cv2.bitwise_and(rgb, rgb, mask=binary_mask)
@@ -259,7 +263,10 @@ def gray_dataset_maker(input_dir, rgb_dir, verbose=False, test = False):
             # Save
             cv2.imwrite(f"{output_gray_dir}/{mask_name}", masked_rgb)
 
-def full_dataset_maker(input_dir, output_dir, masked_dir, features_dir,  model_path, verbose=False, test = False):
+
+def full_dataset_maker(
+    input_dir, output_dir, masked_dir, features_dir, model_path, verbose=False, test=False
+):
     """
     End-to-end dataset build: segmentation masks -> masked-RGB images ->
     per-sample feature CSVs.
@@ -292,9 +299,9 @@ def full_dataset_maker(input_dir, output_dir, masked_dir, features_dir,  model_p
     mask_files, image_files = file_extraction(output_dir, Verbose=verbose)
     features_dir = features_extraction(image_files, mask_files, features_dir=features_dir)
     return features_dir
-    
-if __name__ == "__main__":
 
+
+if __name__ == "__main__":
     # Data/ lives next to the yeast_vacuole_pipeline package, regardless of
     # machine or user (this file is at yeast_vacuole_pipeline/features_extraction/).
     DATA_DIR = (Path(__file__).resolve().parent.parent / "Data").as_posix()
@@ -306,5 +313,9 @@ if __name__ == "__main__":
     model_path = f"{DATA_DIR}/Model/Weights.pt"
     features_dir = f"{DATA_DIR}/Features"
 
-    full_dataset_maker(input_dir, output_dir, masked_dir, features_dir, model_path, verbose = False, test = False)
-    full_dataset_maker(input_dir_test, output_dir, masked_dir, features_dir, model_path, verbose = False, test = True)
+    full_dataset_maker(
+        input_dir, output_dir, masked_dir, features_dir, model_path, verbose=False, test=False
+    )
+    full_dataset_maker(
+        input_dir_test, output_dir, masked_dir, features_dir, model_path, verbose=False, test=True
+    )

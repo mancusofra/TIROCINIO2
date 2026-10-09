@@ -12,17 +12,20 @@ plot_different_th, try_different_th and get_filtered_df are standalone
 analysis helpers for tuning the filtering threshold — not wired into the menu.
 """
 
-from .data_processing import load_data, shuffle_data, df_compare
-from .fuzzy_km import fuzzy_clustering, accuracy_calculator, unsupervised_assisted_filtering
-from .random_forest import fit_random_forest, model_accuracy
-from .unet_segmentation import unet_torch
-from .features_extraction import features_extraction
-from .visualizer import pca_plot
+import os
+import pickle
+import platform
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-import os, pickle, platform
-from pathlib import Path
 from sklearn.preprocessing import StandardScaler
+
+from .data_processing import df_compare, load_data, shuffle_data
+from .features_extraction import features_extraction
+from .fuzzy_km import fuzzy_clustering, unsupervised_assisted_filtering
+from .random_forest import fit_random_forest, model_accuracy
+from .unet_segmentation import unet_torch
+from .visualizer import pca_plot
 
 # Data/ lives next to this file; legacy/ is the repo-level folder one level up
 # from yeast_vacuole_pipeline/. Computed from __file__ so this works on any
@@ -31,9 +34,11 @@ PIPELINE_DIR = Path(__file__).resolve().parent
 DATA_DIR = (PIPELINE_DIR / "Data").as_posix()
 LEGACY_DIR = (PIPELINE_DIR.parent / "legacy").as_posix()
 
+
 def clear_terminal():
     """Clears the terminal (cross-platform: 'cls' on Windows, 'clear' otherwise)."""
-    os.system('cls' if platform.system() == 'Windows' else 'clear')
+    os.system("cls" if platform.system() == "Windows" else "clear")
+
 
 def confirm_long_operation():
     """
@@ -47,11 +52,12 @@ def confirm_long_operation():
     print("WARNING!!: You are about to perform an operation that may take a long time")
     print("and will **overwrite the existing model**.")
     response = input("Are you sure you want to continue? [y/N]: ").strip().lower()
-    
-    if response not in ['y', 'yes']:
+
+    if response not in ["y", "yes"]:
         print("Operation aborted.")
         return False
     return True
+
 
 def filter_accuracy(shuffled_elements, removed_elements, common_elements):
     """
@@ -68,9 +74,12 @@ def filter_accuracy(shuffled_elements, removed_elements, common_elements):
         fraction of the mislabeled rows that got removed, and fraction of
         the removed rows that were actually mislabeled.
     """
-    accuracy_correctelements =  len(common_elements) / len(shuffled_elements)
-    accuracy_incorrectelements = len(common_elements) / len(removed_elements) if len(removed_elements) > 0 else 0
+    accuracy_correctelements = len(common_elements) / len(shuffled_elements)
+    accuracy_incorrectelements = (
+        len(common_elements) / len(removed_elements) if len(removed_elements) > 0 else 0
+    )
     return accuracy_correctelements, accuracy_incorrectelements
+
 
 def try_different_th(shuffled_df, lista_elementi_cambiati):
     """
@@ -96,17 +105,22 @@ def try_different_th(shuffled_df, lista_elementi_cambiati):
     n_clusters = 4
 
     for th in range(1, 10):
-        th = th/10
-        valid_elements = unsupervised_assisted_filtering.get_valid_elements(u, y_true, y_pred, n_clusters, threshold=th)
+        th = th / 10
+        valid_elements = unsupervised_assisted_filtering.get_valid_elements(
+            u, y_true, y_pred, n_clusters, threshold=th
+        )
         reduced_df = unsupervised_assisted_filtering.get_valid_df(valid_elements, shuffled_df)
         lista_elementi_tolti = df_compare.get_differences(shuffled_df, reduced_df)
         common_elements = set(lista_elementi_cambiati).intersection(set(lista_elementi_tolti))
 
-        accuracy_correctelements, accuracy_incorrectelements = filter_accuracy(lista_elementi_cambiati, lista_elementi_tolti, common_elements)
+        accuracy_correctelements, accuracy_incorrectelements = filter_accuracy(
+            lista_elementi_cambiati, lista_elementi_tolti, common_elements
+        )
         lis.append((th, accuracy_correctelements, accuracy_incorrectelements))
     return lis
 
-def plot_different_th(shuffle_p = 0.2):
+
+def plot_different_th(shuffle_p=0.2):
     """
     Standalone analysis helper (not wired into the menu): loads the features,
     injects `shuffle_p` mislabeled rows, then plots how many correctly- vs.
@@ -117,7 +131,6 @@ def plot_different_th(shuffle_p = 0.2):
         shuffle_p (float): Fraction of rows to mislabel before filtering.
     """
     Feature_dir_train = f"{DATA_DIR}/Features/"
-    Feature_dir_test = f"{DATA_DIR}/Features_test/"
     full_df = load_data.load_data(Feature_dir_train)
     shuffled_df = shuffle_data.shuffle_data(full_df, p=shuffle_p)
     lista_elementi_cambiati = df_compare.find_class_mismatches(full_df, shuffled_df)
@@ -128,15 +141,18 @@ def plot_different_th(shuffle_p = 0.2):
     accuracy_incorrect = [x[2] for x in results]
 
     plt.figure(figsize=(10, 6))
-    plt.plot(thresholds, accuracy_correct, label="Number of correct elements removed", marker='o')
-    plt.plot(thresholds, accuracy_incorrect, label="Number of incorrect elements removed", marker='o')
+    plt.plot(thresholds, accuracy_correct, label="Number of correct elements removed", marker="o")
+    plt.plot(
+        thresholds, accuracy_incorrect, label="Number of incorrect elements removed", marker="o"
+    )
     plt.xlabel("Threshold")
     plt.ylabel("Number of elements")
     plt.title(f"Percentage of shuffled elements: {shuffle_p}")
     plt.legend()
     plt.grid(True)
     plt.show(block=False)
-        
+
+
 def get_filtered_df(shuffled_df, threshold):
     """
     Runs fuzzy c-means on shuffled_df and returns only the rows that pass
@@ -156,9 +172,12 @@ def get_filtered_df(shuffled_df, threshold):
     y_true = y
     n_clusters = 4
 
-    valid_elements = unsupervised_assisted_filtering.get_valid_elements(u, y_true, y_pred, n_clusters, threshold=threshold)
+    valid_elements = unsupervised_assisted_filtering.get_valid_elements(
+        u, y_true, y_pred, n_clusters, threshold=threshold
+    )
     reduced_df = unsupervised_assisted_filtering.get_valid_df(valid_elements, shuffled_df)
     return reduced_df
+
 
 def menu():
     """Interactive CLI entry point for the pipeline; see main.py's module docstring for what each option does."""
@@ -172,17 +191,17 @@ def menu():
         print("0. Exit")
         choice = input("Enter your choice: ")
 
-        if choice == '1':
+        if choice == "1":
             if confirm_long_operation():
                 data_dir = f"{DATA_DIR}/Mask/"
                 history = unet_torch.train_model(data_dir)
                 with open(f"{DATA_DIR}/Model/history.pkl", "wb") as f:
                     pickle.dump(history, f)
 
-        elif choice == '2':
+        elif choice == "2":
             unet_torch.load_and_plot()
 
-        elif choice == '3':
+        elif choice == "3":
             masked_dir = f"{DATA_DIR}/Mask"
             input_dir = f"{DATA_DIR}/Original_images/Train_annotated"
             input_dir_test = f"{DATA_DIR}/Original_images/test"
@@ -190,19 +209,35 @@ def menu():
             model_path = f"{DATA_DIR}/Model/Weights.pt"
             features_dir = f"{DATA_DIR}/Features"
 
-            features_extraction.full_dataset_maker(input_dir, output_dir, masked_dir, features_dir, model_path, verbose = False, test = False)
-            features_extraction.full_dataset_maker(input_dir_test, output_dir, masked_dir, features_dir, model_path, verbose = False, test = True)
-        
-        elif choice == '4':
+            features_extraction.full_dataset_maker(
+                input_dir,
+                output_dir,
+                masked_dir,
+                features_dir,
+                model_path,
+                verbose=False,
+                test=False,
+            )
+            features_extraction.full_dataset_maker(
+                input_dir_test,
+                output_dir,
+                masked_dir,
+                features_dir,
+                model_path,
+                verbose=False,
+                test=True,
+            )
+
+        elif choice == "4":
             extracted_dir = f"{LEGACY_DIR}/IntegratedPipeline/Data/Features"
             full_df = load_data.load_data(extracted_dir)
-            X = full_df.select_dtypes(include='number')
+            X = full_df.select_dtypes(include="number")
             X_scaled = StandardScaler().fit_transform(X)
             labels = full_df["class"]
 
             pca_plot.apply_and_plot_pca(X_scaled, labels)
 
-        elif choice == '5':
+        elif choice == "5":
             Feature_dir_train = f"{DATA_DIR}/Features/"
             Feature_dir_test = f"{DATA_DIR}/Features_test/"
             full_df = load_data.load_data(Feature_dir_train)
@@ -225,13 +260,11 @@ def menu():
             print(f"Delta accuracy filtered - unfiletered: {accuracy_filtered - accuracy_shuffled}")
             input("Enter to continue . . .")
 
-        elif choice == '0':
+        elif choice == "0":
             break
         else:
             print("Invalid choice. Please try again.")
 
+
 if __name__ == "__main__":
-
     menu()
-
-

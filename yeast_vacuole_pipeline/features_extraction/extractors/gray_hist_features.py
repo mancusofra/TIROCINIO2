@@ -1,8 +1,10 @@
 import numpy as np
 from scipy.stats import kurtosis, skew
 
-def extract_gray_hist_features(img_gray,
-features_vector = ["mean", "std", "kurtosis", "skewness", "entropy"]):
+
+def extract_gray_hist_features(
+    img_gray, features_vector=["mean", "std", "kurtosis", "skewness", "entropy"]
+):
     """
     Extracts statistical features from the grayscale intensity histogram.
 
@@ -38,15 +40,15 @@ features_vector = ["mean", "std", "kurtosis", "skewness", "entropy"]):
     entropy = -np.sum(hist_nonzero * np.log2(hist_nonzero))
 
     features = []
-    
+
     # Create a mapping of feature names to their computed values
     # This allows for easy retrieval of feature values based on the requested features.
     feature_map = {
-    "mean": mean_val,
-    "std": std_val,
-    "kurtosis": kurt,
-    "skewness": asym,
-    "entropy": entropy
+        "mean": mean_val,
+        "std": std_val,
+        "kurtosis": kurt,
+        "skewness": asym,
+        "entropy": entropy,
     }
 
     for feature in features_vector:

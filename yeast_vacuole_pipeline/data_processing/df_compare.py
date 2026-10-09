@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def find_class_mismatches(df1: pd.DataFrame, df2: pd.DataFrame) -> list:
     """
     Compares df1 and df2 (same index) and returns the indices of the rows
@@ -14,9 +15,10 @@ def find_class_mismatches(df1: pd.DataFrame, df2: pd.DataFrame) -> list:
     """
     mismatches = []
     for index, row in df1.iterrows():
-        if index in df2.index and row['class'] != df2.loc[index, 'class']:
+        if index in df2.index and row["class"] != df2.loc[index, "class"]:
             mismatches.append(index)
     return mismatches
+
 
 def get_differences(df_big: pd.DataFrame, df_small: pd.DataFrame) -> list:
     """

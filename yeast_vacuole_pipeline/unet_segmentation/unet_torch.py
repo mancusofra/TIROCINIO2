@@ -1,38 +1,42 @@
-import os, time, sys, pickle
+import os
+import pickle
+import sys
+import time
 from glob import glob
 from pathlib import Path
-from tqdm import tqdm
 
+import albumentations as A
 import cv2
-import numpy as np
-import pandas as pd
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import albumentations as A
-from scipy.ndimage.morphology import binary_dilation
+import numpy as np
+import pandas as pd
 import segmentation_models_pytorch as smp
-from sklearn.impute import SimpleImputer
-from sklearn.model_selection import train_test_split
-
 import torch
+from scipy.ndimage.morphology import binary_dilation
+from sklearn.model_selection import train_test_split
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
+from tqdm import tqdm
 
-
-#Decide if to use GPU or CPU by checking if CUDA is available
+# Decide if to use GPU or CPU by checking if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data/ lives next to yeast_vacuole_pipeline/ (this file is two levels down,
 # in unet_segmentation/), independent of machine/user.
 DATA_DIR = (Path(__file__).resolve().parent.parent / "Data").as_posix()
 
-class EarlyStopping():
+
+class EarlyStopping:
     """
     Stops training when loss stops decreasing in a PyTorch module.
     """
-    def __init__(self, patience:int = 6, min_delta: float = 0, weights_path: str = 'Data/Model/Weights.pt'):
+
+    def __init__(
+        self, patience: int = 6, min_delta: float = 0, weights_path: str = "Data/Model/Weights.pt"
+    ):
         """
         :param patience: number of epochs of non-decreasing loss before stopping
         :param min_delta: minimum difference between best and new loss that is considered
@@ -42,7 +46,7 @@ class EarlyStopping():
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
-        self.best_loss = float('inf')
+        self.best_loss = float("inf")
         self.weights_path = weights_path
 
     def __call__(self, val_loss: float, model: torch.nn.Module):
@@ -63,18 +67,19 @@ class EarlyStopping():
         """
         return model.load_state_dict(torch.load(self.weights_path))
 
+
 class MriDataset(Dataset):
     """
     PyTorch Dataset over a DataFrame with 'images_paths'/'masks_paths' columns
     (see create_df), loading and pairing the raw image with its mask.
     """
+
     def __init__(self, df, transform=None, mean=0.5, std=0.25):
         super(MriDataset, self).__init__()
         self.df = df
         self.transform = transform
         self.mean = mean
         self.std = std
-
 
     def __len__(self):
         return len(self.df)
@@ -91,38 +96,43 @@ class MriDataset(Dataset):
             The mask is binarized to {0, 1} (originally 0/255).
         """
         row = self.df.iloc[idx]
-        img = cv2.imread(row['images_paths'], cv2.IMREAD_UNCHANGED)
-        mask = cv2.imread(row['masks_paths'], cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(row["images_paths"], cv2.IMREAD_UNCHANGED)
+        mask = cv2.imread(row["masks_paths"], cv2.IMREAD_GRAYSCALE)
         if raw:
             return img, mask
 
         if self.transform:
             augmented = self.transform(image=img, mask=mask)
-            image, mask = augmented['image'], augmented['mask']
-        
+            image, mask = augmented["image"], augmented["mask"]
+
         img = T.functional.to_tensor(img)
         mask = mask // 255
         mask = torch.Tensor(mask)
         return img, mask
 
+
 def iou_pytorch(predictions: torch.Tensor, labels: torch.Tensor, e: float = 1e-7):
     """Calculates Intersection over Union for a tensor of predictions"""
     predictions = torch.where(predictions > 0.5, 1, 0)
     labels = labels.byte()
-    
+
     intersection = (predictions & labels).float().sum((1, 2))
     union = (predictions | labels).float().sum((1, 2))
-    
+
     iou = (intersection + e) / (union + e)
     return iou
+
 
 def dice_pytorch(predictions: torch.Tensor, labels: torch.Tensor, e: float = 1e-7):
     """Calculates Dice coefficient for a tensor of predictions"""
     predictions = torch.where(predictions > 0.5, 1, 0)
     labels = labels.byte()
-    
+
     intersection = (predictions & labels).float().sum((1, 2))
-    return ((2 * intersection) + e) / (predictions.float().sum((1, 2)) + labels.float().sum((1, 2)) + e)
+    return ((2 * intersection) + e) / (
+        predictions.float().sum((1, 2)) + labels.float().sum((1, 2)) + e
+    )
+
 
 def BCE_dice(output, target, alpha=0.01):
     """
@@ -140,6 +150,7 @@ def BCE_dice(output, target, alpha=0.01):
     soft_dice = 1 - dice_pytorch(output, target).mean()
     return bce + alpha * soft_dice
 
+
 def create_df(data_dir):
     """
     Builds a DataFrame pairing each mask under data_dir with its source image.
@@ -156,20 +167,21 @@ def create_df(data_dir):
         pd.DataFrame: Columns 'images_paths' and 'masks_paths'.
     """
     images_paths = []
-    masks_paths = glob(f'{data_dir}/*/*.tif')
+    masks_paths = glob(f"{data_dir}/*/*.tif")
     print(len(masks_paths))
 
     for i in masks_paths:
-        images_paths.append(i.replace('/Mask/', '/Original_images/Train_annotated/'))
+        images_paths.append(i.replace("/Mask/", "/Original_images/Train_annotated/"))
 
     print(len(images_paths))
     for img_path in images_paths:
         if not os.path.exists(img_path):
             print(f"Image not found: {img_path}")
 
-    df = pd.DataFrame(data= {'images_paths': images_paths, 'masks_paths': masks_paths})
+    df = pd.DataFrame(data={"images_paths": images_paths, "masks_paths": masks_paths})
 
     return df
+
 
 def split_df(df):
     """
@@ -182,10 +194,11 @@ def split_df(df):
     Returns:
         tuple: (train_df, valid_df, test_df).
     """
-    train_df, dummy_df = train_test_split(df, train_size= 0.8, random_state= 42)
-    valid_df, test_df = train_test_split(dummy_df, train_size= 0.5, random_state= 42)
+    train_df, dummy_df = train_test_split(df, train_size=0.8, random_state=42)
+    valid_df, test_df = train_test_split(dummy_df, train_size=0.5, random_state=42)
 
     return train_df, valid_df, test_df
+
 
 def create_gens(df, aug_dict):
     """
@@ -208,28 +221,45 @@ def create_gens(df, aug_dict):
     img_size = (80, 80)
     batch_size = 16
 
-
     img_gen = ImageDataGenerator(**aug_dict)
     msk_gen = ImageDataGenerator(**aug_dict)
 
     # Create general generator
-    image_gen = img_gen.flow_from_dataframe(df, x_col='images_paths', class_mode=None, color_mode='rgb', target_size=img_size,
-                                            batch_size=batch_size, save_to_dir=None, save_prefix='image', seed=1)
+    image_gen = img_gen.flow_from_dataframe(
+        df,
+        x_col="images_paths",
+        class_mode=None,
+        color_mode="rgb",
+        target_size=img_size,
+        batch_size=batch_size,
+        save_to_dir=None,
+        save_prefix="image",
+        seed=1,
+    )
 
-    mask_gen = msk_gen.flow_from_dataframe(df, x_col='masks_paths', class_mode=None, color_mode='grayscale', target_size=img_size,
-                                            batch_size=batch_size, save_to_dir=None, save_prefix= 'mask', seed=1)
+    mask_gen = msk_gen.flow_from_dataframe(
+        df,
+        x_col="masks_paths",
+        class_mode=None,
+        color_mode="grayscale",
+        target_size=img_size,
+        batch_size=batch_size,
+        save_to_dir=None,
+        save_prefix="mask",
+        seed=1,
+    )
 
     gen = zip(image_gen, mask_gen)
 
-    for (img, msk) in gen:
+    for img, msk in gen:
         img = img / 255
         msk = msk / 255
 
         msk[msk > 0.5] = 1
         msk[msk <= 0.5] = 0
 
-
         yield (img, msk)
+
 
 def training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn, lr_scheduler):
     """
@@ -251,11 +281,11 @@ def training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn,
         dict: History with 'train_loss', 'val_loss', 'val_IoU', 'val_dice'
         (one entry per completed epoch).
     """
-    history = {'train_loss': [], 'val_loss': [], 'val_IoU': [], 'val_dice': []}
+    history = {"train_loss": [], "val_loss": [], "val_IoU": [], "val_dice": []}
     early_stopping = EarlyStopping(patience=7)
-    
+
     for epoch in range(1, epochs + 1):
-        start_time = time.time()       
+        start_time = time.time()
         running_loss = 0
         model.train()
         for i, data in enumerate(tqdm(train_loader)):
@@ -268,7 +298,7 @@ def training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn,
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-        
+
         model.eval()
         with torch.no_grad():
             running_IoU = 0
@@ -287,14 +317,16 @@ def training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn,
         val_loss = running_valid_loss / len(valid_loader.dataset)
         val_dice = running_dice / len(valid_loader.dataset)
         val_IoU = running_IoU / len(valid_loader.dataset)
-        
-        history['train_loss'].append(train_loss)
-        history['val_loss'].append(val_loss)
-        history['val_IoU'].append(val_IoU)
-        history['val_dice'].append(val_dice)
-        print(f'Epoch: {epoch}/{epochs} | Training loss: {train_loss} | Validation loss: {val_loss} | Validation Mean IoU: {val_IoU} '
-         f'| Validation Dice coefficient: {val_dice}')
-        
+
+        history["train_loss"].append(train_loss)
+        history["val_loss"].append(val_loss)
+        history["val_IoU"].append(val_IoU)
+        history["val_dice"].append(val_dice)
+        print(
+            f"Epoch: {epoch}/{epochs} | Training loss: {train_loss} | Validation loss: {val_loss} | Validation Mean IoU: {val_IoU} "
+            f"| Validation Dice coefficient: {val_dice}"
+        )
+
         lr_scheduler.step(val_loss)
         if early_stopping(val_loss, model):
             early_stopping.load_weights(model)
@@ -303,17 +335,19 @@ def training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn,
     model.eval()
     return history
 
+
 def umodel():
     """Returns a UNET model with EfficientNet-B7 as encoder"""
     model = smp.Unet(
-    encoder_name="efficientnet-b7",
-    encoder_weights="imagenet",
-    in_channels=3,
-    classes=1,
-    activation='sigmoid',
+        encoder_name="efficientnet-b7",
+        encoder_weights="imagenet",
+        in_channels=3,
+        classes=1,
+        activation="sigmoid",
     )
     model.to(device)
     return model
+
 
 def exemple():
     """
@@ -326,13 +360,13 @@ def exemple():
     """
     n_examples = 4
 
-    fig, axs = plt.subplots(n_examples, 3, figsize=(20, n_examples*7), constrained_layout=True)
+    fig, axs = plt.subplots(n_examples, 3, figsize=(20, n_examples * 7), constrained_layout=True)
     i = 0
     for ax in axs:
         while True:
             image, mask = train_dataset.__getitem__(i, raw=True)
             i += 1
-            if np.any(mask): 
+            if np.any(mask):
                 ax[0].set_title("MRI images")
                 ax[0].imshow(image)
                 ax[1].set_title("Highlited abnormality")
@@ -344,21 +378,23 @@ def exemple():
     plt.show()
     plt.close()
 
+
 def plot_loss(history):
     """Plots train/validation loss, then validation IoU and Dice, over epochs (see training_loop's history dict)."""
     plt.figure(figsize=(7, 7))
-    plt.plot(history['train_loss'], label='Training loss')
-    plt.plot(history['val_loss'], label='Validation loss')
+    plt.plot(history["train_loss"], label="Training loss")
+    plt.plot(history["val_loss"], label="Validation loss")
     plt.legend()
-    plt.show(block = False)
-    #plt.close()
+    plt.show(block=False)
+    # plt.close()
 
     plt.figure(figsize=(7, 7))
-    plt.plot(history['val_IoU'], label='Validation mean Jaccard index')
-    plt.plot(history['val_dice'], label='Validation Dice coefficient')
+    plt.plot(history["val_IoU"], label="Validation mean Jaccard index")
+    plt.plot(history["val_dice"], label="Validation Dice coefficient")
     plt.legend()
-    plt.show(block = False)
-    #plt.close()
+    plt.show(block=False)
+    # plt.close()
+
 
 def plot_test_evaluation(test_loader, test_dataset, model, loss_fn):
     """Prints the model's mean loss, IoU and Dice coefficient over the test set."""
@@ -378,8 +414,9 @@ def plot_test_evaluation(test_loader, test_dataset, model, loss_fn):
         loss = running_loss / len(test_dataset)
         dice = running_dice / len(test_dataset)
         IoU = running_IoU / len(test_dataset)
-        
-        print(f'Tests: loss: {loss} | Mean IoU: {IoU} | Dice coefficient: {dice}')
+
+        print(f"Tests: loss: {loss} | Mean IoU: {IoU} | Dice coefficient: {dice}")
+
 
 def plot_test_images(test_loader, test_dataset, model):
     """
@@ -390,11 +427,17 @@ def plot_test_images(test_loader, test_dataset, model):
     columns = 2
     n_examples = columns * width
 
-    fig, axs = plt.subplots(columns, width, figsize=(15*width , 15*columns), constrained_layout=True)
-    red_patch = mpatches.Patch(color='red', label='The red data')
-    fig.legend(loc='upper right',handles=[
-        mpatches.Patch(color='red', label='Ground truth'),
-        mpatches.Patch(color='green', label='Predicted abnormality')])
+    fig, axs = plt.subplots(
+        columns, width, figsize=(15 * width, 15 * columns), constrained_layout=True
+    )
+    red_patch = mpatches.Patch(color="red", label="The red data")
+    fig.legend(
+        loc="upper right",
+        handles=[
+            mpatches.Patch(color="red", label="Ground truth"),
+            mpatches.Patch(color="green", label="Predicted abnormality"),
+        ],
+    )
     i = 0
     with torch.no_grad():
         for data in test_loader:
@@ -404,18 +447,19 @@ def plot_test_images(test_loader, test_dataset, model):
                 continue
 
             image = image.to(device)
-            prediction = model(image).to('cpu')[0][0]
+            prediction = model(image).to("cpu")[0][0]
             prediction = torch.where(prediction > 0.5, 1, 0)
             prediction_edges = prediction - binary_dilation(prediction)
             ground_truth = mask - binary_dilation(mask)
             image[0, 0, ground_truth.bool()] = 1
             image[0, 1, prediction_edges.bool()] = 1
-            
-            axs[i//width][i%width].imshow(image[0].to('cpu').permute(1, 2, 0))
+
+            axs[i // width][i % width].imshow(image[0].to("cpu").permute(1, 2, 0))
             if n_examples == i + 1:
                 break
             i += 1
     plt.show()
+
 
 def train_model(data_dir):
     """
@@ -432,11 +476,13 @@ def train_model(data_dir):
     df = create_df(data_dir)
     train_df, valid_df, test_df = split_df(df)
 
-    transform = A.Compose([
-    A.ChannelDropout(p=0.3),
-    A.RandomBrightnessContrast(p=0.3),
-    A.ColorJitter(p=0.3),
-    ])
+    transform = A.Compose(
+        [
+            A.ChannelDropout(p=0.3),
+            A.RandomBrightnessContrast(p=0.3),
+            A.ColorJitter(p=0.3),
+        ]
+    )
 
     train_dataset = MriDataset(train_df, transform)
     valid_dataset = MriDataset(valid_df)
@@ -448,14 +494,16 @@ def train_model(data_dir):
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=1)
 
-
     model = umodel()
     loss_fn = BCE_dice
     optimizer = Adam(model.parameters(), lr=0.001)
     epochs = 60
-    lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=2,factor=0.2)
+    lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=2, factor=0.2)
 
-    return training_loop(epochs, model, train_loader, valid_loader, optimizer, loss_fn, lr_scheduler)
+    return training_loop(
+        epochs, model, train_loader, valid_loader, optimizer, loss_fn, lr_scheduler
+    )
+
 
 def load_and_plot():
     """
@@ -467,11 +515,13 @@ def load_and_plot():
     df = create_df(data_dir)
     train_df, valid_df, test_df = split_df(df)
 
-    transform = A.Compose([
-    A.ChannelDropout(p=0.3),
-    A.RandomBrightnessContrast(p=0.3),
-    A.ColorJitter(p=0.3),
-    ])
+    transform = A.Compose(
+        [
+            A.ChannelDropout(p=0.3),
+            A.RandomBrightnessContrast(p=0.3),
+            A.ColorJitter(p=0.3),
+        ]
+    )
 
     train_dataset = MriDataset(train_df, transform)
     valid_dataset = MriDataset(valid_df)
@@ -488,7 +538,7 @@ def load_and_plot():
         encoder_weights="imagenet",
         in_channels=3,
         classes=1,
-        activation='sigmoid',
+        activation="sigmoid",
     )
     model.load_state_dict(torch.load(f"{DATA_DIR}/Model/Weights.pt"))
     model.to(device)
@@ -497,14 +547,12 @@ def load_and_plot():
     with open(f"{DATA_DIR}/Model/history.pkl", "rb") as f:
         history = pickle.load(f)
 
-
     plot_loss(history)
     plot_test_evaluation(test_loader, test_dataset, model, BCE_dice)
     plot_test_images(test_loader, test_dataset, model)
 
 
 if __name__ == "__main__":
-
     data_dir = f"{DATA_DIR}/Mask/"
 
     if len(sys.argv) < 2:
@@ -521,5 +569,3 @@ if __name__ == "__main__":
 
     else:
         print("Invalid argument. Use -t to train the model or -v to visualize the results.")
-
-    

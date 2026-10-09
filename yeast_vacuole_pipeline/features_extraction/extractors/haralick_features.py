@@ -1,5 +1,6 @@
 from mahotas.features import haralick
 
+
 def extract_haralick_features(gray):
     """
     Computes Haralick texture features based on the gray-level co-occurrence

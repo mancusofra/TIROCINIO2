@@ -1,16 +1,14 @@
-import torch
 import os
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
-from scipy.ndimage.morphology import binary_dilation
 
-from torchvision import transforms as T 
+import cv2
+import matplotlib.pyplot as plt
 import segmentation_models_pytorch as smp
-
+import torch
+from torchvision import transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def load_model(model_path):
     """
@@ -28,14 +26,15 @@ def load_model(model_path):
         encoder_weights="imagenet",
         in_channels=3,
         classes=1,
-        activation='sigmoid',
+        activation="sigmoid",
     )
     model.load_state_dict(torch.load(model_path))
     model.to(device)
     model.eval()
     return model
 
-def predict(model, image_path, device='cuda' if torch.cuda.is_available() else 'cpu'):
+
+def predict(model, image_path, device="cuda" if torch.cuda.is_available() else "cpu"):
     """
     Runs the segmentation model on a single image and returns its binary mask.
 
@@ -55,9 +54,11 @@ def predict(model, image_path, device='cuda' if torch.cuda.is_available() else '
         FileNotFoundError: If image_path cannot be read by OpenCV.
     """
     model.eval()
-    transform = T.Compose([
-        T.ToTensor(),
-    ])
+    transform = T.Compose(
+        [
+            T.ToTensor(),
+        ]
+    )
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
 
     if img is None:
@@ -72,17 +73,18 @@ def predict(model, image_path, device='cuda' if torch.cuda.is_available() else '
         prediction = torch.where(prediction > 0.5, 1, 0)
         prediction = prediction.cpu()
 
-    prediction = prediction.to('cpu')[0][0]
+    prediction = prediction.to("cpu")[0][0]
     return prediction.squeeze().byte().numpy()
+
 
 def show_image(image):
     """Displays a single image (e.g. a predicted mask) full-frame, without axes."""
     plt.imshow(image)
-    plt.axis('off')
+    plt.axis("off")
     plt.show()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # Data/ lives next to yeast_vacuole_pipeline/ (this file is two levels
     # down, in unet_segmentation/), independent of machine/user.
     DATA_DIR = (Path(__file__).resolve().parent.parent / "Data").as_posix()
@@ -95,14 +97,7 @@ if __name__ == "__main__":
     train_annotated_list = []
     for root, dirs, files in os.walk(train_annotated_path):
         for file in files:
-            if file.endswith(('.tif')):
+            if file.endswith((".tif")):
                 image_path = os.path.join(root, file)
                 prediction = predict(model, image_path)
                 show_image(prediction)
-        
-
-
-
-
-
-

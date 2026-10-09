@@ -1,9 +1,8 @@
 import numpy as np
 from skimage.feature import local_binary_pattern
 
-def extract_lbp_features(gray,
-    P = 8,
-    R = 1):
+
+def extract_lbp_features(gray, P=8, R=1):
     """
     Computes Local Binary Pattern (LBP) features, a simple yet powerful
     descriptor for local texture information in an image.

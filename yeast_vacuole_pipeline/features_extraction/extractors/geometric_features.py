@@ -5,8 +5,19 @@ import numpy as np
 class ContourNotFoundError(Exception):
     pass
 
-def extract_geometric_features(gray,
-    features_vector = ["total_area", "total_perimeter", "eccentricity", "circularity", "solidity", "extent", "mean_radius"]):
+
+def extract_geometric_features(
+    gray,
+    features_vector=[
+        "total_area",
+        "total_perimeter",
+        "eccentricity",
+        "circularity",
+        "solidity",
+        "extent",
+        "mean_radius",
+    ],
+):
     """
     Extracts geometric features from a binary or grayscale image.
 
@@ -37,7 +48,9 @@ def extract_geometric_features(gray,
     if len(contours) > 0:
         largest_contour = max(contours, key=cv2.contourArea)
         area = cv2.contourArea(largest_contour)
-        perimeter = cv2.arcLength(largest_contour, True)  # True for closed contour — check whether False makes more sense, but probably not
+        perimeter = cv2.arcLength(
+            largest_contour, True
+        )  # True for closed contour — check whether False makes more sense, but probably not
         features["total_area"] = area
         features["total_perimeter"] = perimeter
 
@@ -49,10 +62,12 @@ def extract_geometric_features(gray,
             eccentricity = np.sqrt(1 - (minor_axis**2 / major_axis**2))
             features["eccentricity"] = eccentricity
         else:
-            raise ContourNotFoundError("The contour has fewer than 5 points (unable to compute eccentricity).")
+            raise ContourNotFoundError(
+                "The contour has fewer than 5 points (unable to compute eccentricity)."
+            )
 
         # Circularity: 1 for a perfect circle, <1 for irregular shapes
-        circularity = 4 * np.pi * (area / (perimeter ** 2)) if perimeter != 0 else 0
+        circularity = 4 * np.pi * (area / (perimeter**2)) if perimeter != 0 else 0
         features["circularity"] = circularity
 
         # Solidity: ratio of contour area to convex hull area
@@ -72,7 +87,10 @@ def extract_geometric_features(gray,
         if moments["m00"] != 0:
             centroid_x = int(moments["m10"] / moments["m00"])
             centroid_y = int(moments["m01"] / moments["m00"])
-            distances = [np.sqrt((point[0][0] - centroid_x)**2 + (point[0][1] - centroid_y)**2) for point in largest_contour]
+            distances = [
+                np.sqrt((point[0][0] - centroid_x) ** 2 + (point[0][1] - centroid_y) ** 2)
+                for point in largest_contour
+            ]
             mean_radius = np.mean(distances)
             features["mean_radius"] = mean_radius
     else:
