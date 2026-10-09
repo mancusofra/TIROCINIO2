@@ -15,28 +15,28 @@ Each image is cropped to a single yeast cell (80x80 px) and labeled with one of:
 ## Repository layout
 
 ```
-YeastVacuolePipeline/   <- the pipeline (see below)
-requirements.txt        <- Python dependencies
+yeast_vacuole_pipeline/ <- the pipeline (see below)
+requirements.txt       <- Python dependencies
 ```
 
-## YeastVacuolePipeline
+## yeast_vacuole_pipeline
 
 The current, complete pipeline. Run interactively via its menu:
 
 ```
-python -m YeastVacuolePipeline.Main
+python -m yeast_vacuole_pipeline.main
 ```
 
 Modules:
 
 | Module | Purpose |
 |---|---|
-| `UNETSegmentation/` | Cell/vacuole segmentation. Two model variants: `UNETSegmentation.py` (Keras/TensorFlow U-Net) and `UNETorch.py` + `LoadModel.py` (PyTorch U-Net via `segmentation_models_pytorch`, EfficientNet-B7 encoder) |
-| `FeaturesExtraction/` | Builds the masked/grayscale dataset from segmented images and extracts per-cell features via `Extractors/` (geometric, gray-level histogram, Haralick texture, Hu moments, LBP, Zernike moments) |
-| `DataProcessing/` | `LoadData` (CSV features → DataFrame), `ShuffleData` (injects a controlled % of mislabeled rows for testing filtering), `DFCompare` (diffing/mismatch helpers) |
-| `FuzzyKM/` | Fuzzy c-means clustering (`FuzzyClustering`) used, together with `UnsupervisedAssistedFiltering`, to flag and drop low-confidence/likely-mislabeled samples before training |
-| `RandomForestClassifier/` | `FitRandomForest` (training) and `ModelAccuracy` (evaluation) — the final supervised classifier, trained on raw vs. filtered data to measure the effect of unsupervised-assisted filtering |
-| `Visualizer/` | `PCA.py` — dimensionality-reduction scatter plots of the extracted feature space |
+| `unet_segmentation/` | Cell/vacuole segmentation. Two model variants: `unet_segmentation.py` (Keras/TensorFlow U-Net) and `unet_torch.py` + `load_model.py` (PyTorch U-Net via `segmentation_models_pytorch`, EfficientNet-B7 encoder) |
+| `features_extraction/` | Builds the masked/grayscale dataset from segmented images and extracts per-cell features via `extractors/` (geometric, gray-level histogram, Haralick texture, Hu moments, LBP, Zernike moments) |
+| `data_processing/` | `load_data` (CSV features → DataFrame), `shuffle_data` (injects a controlled % of mislabeled rows for testing filtering), `df_compare` (diffing/mismatch helpers) |
+| `fuzzy_km/` | Fuzzy c-means clustering (`fuzzy_clustering`) used, together with `unsupervised_assisted_filtering`, to flag and drop low-confidence/likely-mislabeled samples before training |
+| `random_forest/` | `fit_random_forest` (training) and `model_accuracy` (evaluation) — the final supervised classifier, trained on raw vs. filtered data to measure the effect of unsupervised-assisted filtering |
+| `visualizer/` | `pca_plot.py` — dimensionality-reduction scatter plots of the extracted feature space |
 
 ### Data
 
@@ -44,8 +44,8 @@ Raw images, masks and extracted features are not versioned (see `.gitignore`:
 `Data/`, `Features/`). The code expects a `Data/` folder (with `Original_images/`,
 `Mask/`, `DataSet/`, `Features/`, `Model/`) alongside the scripts that reference it.
 
-Paths are resolved relative to the package (see `PIPELINE_DIR` in `Main.py`), so the
-pipeline works from any checkout location as long as `YeastVacuolePipeline/Data/` exists.
+Paths are resolved relative to the package (see `PIPELINE_DIR` in `main.py`), so the
+pipeline works from any checkout location as long as `yeast_vacuole_pipeline/Data/` exists.
 
 ### Known limitations / possible future work
 
