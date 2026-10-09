@@ -13,7 +13,6 @@ analysis helpers for tuning the filtering threshold — not wired into the menu.
 """
 
 import os
-import pickle
 import platform
 from pathlib import Path
 
@@ -24,7 +23,7 @@ from .data_processing import df_compare, load_data, shuffle_data
 from .features_extraction import features_extraction
 from .fuzzy_km import fuzzy_clustering, unsupervised_assisted_filtering
 from .random_forest import fit_random_forest, model_accuracy
-from .unet_segmentation import unet_torch
+from .unet_segmentation import training
 from .visualizer import pca_plot
 
 # Data/ lives next to this file; legacy/ is the repo-level folder one level up
@@ -193,13 +192,10 @@ def menu():
 
         if choice == "1":
             if confirm_long_operation():
-                data_dir = f"{DATA_DIR}/Mask/"
-                history = unet_torch.train_model(data_dir)
-                with open(f"{DATA_DIR}/Model/history.pkl", "wb") as f:
-                    pickle.dump(history, f)
+                training.train_model()
 
         elif choice == "2":
-            unet_torch.load_and_plot()
+            training.evaluate()
 
         elif choice == "3":
             masked_dir = f"{DATA_DIR}/Mask"

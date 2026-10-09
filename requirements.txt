@@ -15,11 +15,7 @@ tqdm>=4.66
 mahotas>=1.4
 kneed>=0.8
 
-# Deep learning: U-Net segmentation exists in two variants (see
-# yeast_vacuole_pipeline/unet_segmentation/) — Keras/TensorFlow and PyTorch.
-# Only the one you intend to run needs to be installed.
-tensorflow
-torch
-torchvision
-segmentation-models-pytorch
-albumentations
+# Deep learning (U-Net segmentation, see yeast_vacuole_pipeline/unet_segmentation/).
+torch>=2.2
+segmentation-models-pytorch>=0.3
+albumentations>=1.4

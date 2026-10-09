@@ -8,8 +8,6 @@ select = ["E", "F", "I", "W"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-# Notebook-style modules with documented dead code / late imports (see their docstrings).
-"yeast_vacuole_pipeline/unet_segmentation/*.py" = ["E402", "F821", "F841"]
 "yeast_vacuole_pipeline/features_extraction/features_extraction.py" = ["F841"]
 
 [tool.pytest.ini_options]

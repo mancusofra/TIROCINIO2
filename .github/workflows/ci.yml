@@ -14,13 +14,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      # Tests cover the non-deep-learning modules only, so TensorFlow/PyTorch
-      # are deliberately not installed here.
+      # CPU-only PyTorch keeps the install small; GPU is not needed for the tests.
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt
           pip install numpy pandas scipy scikit-learn scikit-image scikit-fuzzy \
             opencv-python-headless matplotlib seaborn tqdm mahotas kneed
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install segmentation-models-pytorch albumentations
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest

@@ -27,7 +27,7 @@ requirements.txt       <- Python dependencies
 
 ```
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt        # runtime (includes TensorFlow and PyTorch)
+pip install -r requirements.txt        # runtime (includes PyTorch)
 pip install -r requirements-dev.txt    # pytest + ruff
 ```
 
@@ -38,8 +38,9 @@ ruff check . && ruff format --check .
 pytest
 ```
 
-The test suite covers the non-deep-learning modules (data processing, fuzzy
-filtering, geometric features) and runs on every push via GitHub Actions.
+The test suite covers data processing, fuzzy filtering, geometric features and
+the segmentation code (metrics, dataset, a training step on synthetic images),
+and runs on every push via GitHub Actions.
 
 ## yeast_vacuole_pipeline
 
@@ -53,7 +54,7 @@ Modules:
 
 | Module | Purpose |
 |---|---|
-| `unet_segmentation/` | Cell/vacuole segmentation. Two model variants: `unet_segmentation.py` (Keras/TensorFlow U-Net) and `unet_torch.py` + `load_model.py` (PyTorch U-Net via `segmentation_models_pytorch`, EfficientNet-B7 encoder) |
+| `unet_segmentation/` | Cell/vacuole segmentation with a U-Net (`segmentation_models_pytorch`, EfficientNet-B7 encoder): `dataset.py` (image/mask pairing), `metrics.py` (Dice, IoU, BCE+Dice loss), `training.py` (training with early stopping, evaluation, plots), `load_model.py` (inference) |
 | `features_extraction/` | Builds the masked/grayscale dataset from segmented images and extracts per-cell features via `extractors/` (geometric, gray-level histogram, Haralick texture, Hu moments, LBP, Zernike moments) |
 | `data_processing/` | `load_data` (CSV features → DataFrame), `shuffle_data` (injects a controlled % of mislabeled rows for testing filtering), `df_compare` (diffing/mismatch helpers) |
 | `fuzzy_km/` | Fuzzy c-means clustering (`fuzzy_clustering`) used, together with `unsupervised_assisted_filtering`, to flag and drop low-confidence/likely-mislabeled samples before training |
@@ -78,3 +79,10 @@ pipeline works from any checkout location as long as `yeast_vacuole_pipeline/Dat
   segmented/pre-processed, instead of failing implicitly downstream.
 - Possible directions: add more features, refine the existing ones, or extract
   deep features from a pretrained CNN instead of/alongside hand-crafted ones.
+
+## Acknowledgements
+
+The segmentation setup (U-Net with a pretrained EfficientNet-B7 encoder from
+`segmentation_models_pytorch`, trained with a BCE + Dice loss) was inspired by
+public Kaggle notebooks on the LGG Brain MRI Segmentation dataset, then
+reimplemented for 80x80 yeast cell images.
